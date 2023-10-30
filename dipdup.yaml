@@ -20,3 +20,6 @@ indexes:
       - callback: on_update_proposals
         contract: DAO_governance
         path: proposals
+      - callback: on_update_governance_parameters
+        contract: DAO_governance
+        path: governance_parameters
