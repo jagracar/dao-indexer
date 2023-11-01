@@ -23,3 +23,9 @@ indexes:
       - callback: on_update_governance_parameters
         contract: DAO_governance
         path: governance_parameters
+      - callback: on_update_token_votes
+        contract: DAO_governance
+        path: token_votes
+      - callback: on_update_representatives_votes
+        contract: DAO_governance
+        path: representatives_votes
