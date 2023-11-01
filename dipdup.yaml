@@ -2,10 +2,18 @@ spec_version: 2.0
 package: dao_indexer
 
 contracts:
+  HEN_SUBJKT:
+    kind: tezos
+    address: KT1My1wDZHDGweCrJnQJi3wcFaS67iksirvj
+    typename: hen_subjkt
   DAO_governance:
     kind: tezos
     address: KT1VLLPBjSFFHMp9LxoRfA65cynkxeRDfQeX
     typename: dao_governance
+  DAO_token:
+    kind: tezos
+    address: KT1QrtA753MSv8VGxkDrKKyJniG5JtuHHbtV
+    typename: dao_token
 
 datasources:
   tzkt_mainnet:
@@ -17,6 +25,9 @@ indexes:
     kind: tezos.tzkt.big_maps
     datasource: tzkt_mainnet
     handlers:
+      - callback: on_update_registry
+        contract: HEN_SUBJKT
+        path: registries
       - callback: on_update_proposals
         contract: DAO_governance
         path: proposals
@@ -29,3 +40,9 @@ indexes:
       - callback: on_update_representatives_votes
         contract: DAO_governance
         path: representatives_votes
+  token:
+    kind: tezos.tzkt.token_balances
+    datasource: tzkt_mainnet
+    handlers:
+      - callback: on_balance_update
+        contract: DAO_token

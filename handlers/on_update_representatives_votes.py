@@ -26,7 +26,7 @@ async def on_update_representatives_votes(
         id="%s_%s" % (communityId, proposalId),
         community=community,
         proposal=proposal,
-        vote=models.VoteKind[list(representatives_votes.value.__root__.__dict__.keys())[0]],
+        vote=models.VoteKind(list(representatives_votes.value.__root__.__dict__.keys())[0])
     )
 
     # Print some log information

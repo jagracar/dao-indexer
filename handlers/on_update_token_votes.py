@@ -26,7 +26,7 @@ async def on_update_token_votes(
         id="%s_%s" % (address, proposalId),
         member=member,
         proposal=proposal,
-        vote=models.VoteKind[list(token_votes.value.vote.__dict__.keys())[0]],
+        vote=models.VoteKind(list(token_votes.value.vote.__dict__.keys())[0]),
         weight=token_votes.value.weight
     )
 
