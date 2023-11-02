@@ -1,4 +1,5 @@
 from dao_indexer import models as models
+from dao_indexer.handlers import utils
 from dao_indexer.types.dao_governance.tezos_big_maps.representatives_votes_key import RepresentativesVotesKey
 from dao_indexer.types.dao_governance.tezos_big_maps.representatives_votes_value import RepresentativesVotesValue
 from dipdup.context import HandlerContext
@@ -13,9 +14,11 @@ async def on_update_representatives_votes(
     if not representatives_votes.action.has_value:
         return
 
-    # Get the associated community
+    # Get the associated community and update their voted proposals counter
     communityId = representatives_votes.key.string
     community, _  = await models.Community.get_or_create(id=communityId)
+    community.n_voted_proposals += 1
+    await community.save()
 
     # Get the associated proposal
     proposalId = representatives_votes.key.nat
@@ -26,8 +29,12 @@ async def on_update_representatives_votes(
         id="%s_%s" % (communityId, proposalId),
         community=community,
         proposal=proposal,
-        vote=models.VoteKind(list(representatives_votes.value.__root__.__dict__.keys())[0])
+        vote=models.VoteKind(utils.first_key(representatives_votes.value.__root__.dict())),
+        timestamp=representatives_votes.data.timestamp
     )
 
     # Print some log information
-    ctx.logger.info(vote)
+    ctx.logger.info(
+        "%s voted option '%s' in proposal %s",
+        community, vote.vote.value, proposalId
+    )

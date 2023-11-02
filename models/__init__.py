@@ -3,7 +3,13 @@ from dipdup import fields
 from dipdup.models import Model
 
 
-class VoteMethod(Enum):
+class ProposalVoteWeightMethod(Enum):
+    LINEAR = 'linear'
+    QUADRATIC = 'quadratic'
+
+
+class PollVoteWeightMethod(Enum):
+    EQUAL = 'equal'
     LINEAR = 'linear'
     QUADRATIC = 'quadratic'
 
@@ -33,19 +39,28 @@ class Member(Model):
     address = fields.TextField(pk=True)
     alias = fields.TextField(default='')
     token_balance = fields.DecimalField(decimal_places=6, max_digits=12, default=0)
+    n_token_checkpoints = fields.BigIntField(default=0)
+    n_submitted_proposals = fields.IntField(default=0)
+    n_voted_proposals = fields.IntField(default=0)
+    n_submitted_polls = fields.IntField(default=0)
+    n_voted_polls = fields.IntField(default=0)
 
     def __str__(self):
-        return "DAO member %s, %s TEIA" % (
-            self.alias if self.alias != '' else self.address, self.token_balance)
+        username = self.alias if self.alias != '' else self.address
+        return "%s (%.1f TEIA)" % (username, self.token_balance)
 
 
 class Community(Model):
     id = fields.TextField(pk=True)
+    n_voted_proposals = fields.IntField(default=0)
+
+    def __str__(self):
+        return "%s" % self.id
 
 
 class GovernanceParameters(Model):
     id = fields.IntField(pk=True)
-    vote_method = fields.EnumField(enum_type=VoteMethod)
+    vote_method = fields.EnumField(enum_type=ProposalVoteWeightMethod)
     vote_period = fields.TimeDeltaField()
     wait_period = fields.TimeDeltaField()
     escrow_amount = fields.BigIntField()
@@ -61,7 +76,7 @@ class GovernanceParameters(Model):
     max_quorum = fields.BigIntField()
 
     def __str__(self):
-        return "Governance parameters %s" % self.id
+        return "governance parameters %i" % self.id
 
 
 class Proposal(Model):
@@ -69,11 +84,12 @@ class Proposal(Model):
     title = fields.TextField()
     description = fields.TextField()
     kind = fields.EnumField(enum_type=ProposalKind)
+    content = fields.JSONField()
     issuer: fields.ForeignKeyField[Member] = fields.ForeignKeyField(
-        'models.Member', 'submited_proposals')
+        'models.Member', 'submitted_proposals')
     timestamp = fields.DatetimeField()
-    voting_end = fields.DatetimeField()
-    waiting_end = fields.DatetimeField()
+    vote_end_timestamp = fields.DatetimeField()
+    wait_end_timestamp = fields.DatetimeField()
     level = fields.BigIntField()
     quorum = fields.BigIntField()
     gp: fields.ForeignKeyField[GovernanceParameters] = fields.ForeignKeyField(
@@ -83,32 +99,68 @@ class Proposal(Model):
     representatives_votes_summary = fields.JSONField()
 
     def __str__(self):
-        return "Proposal %i: %s" % (self.id, self.title)
+        return "proposal %i (%s)" % (self.id, self.title)
 
 
 class MemberVote(Model):
     id = fields.TextField(pk=True)
     member: fields.ForeignKeyField[Member] = fields.ForeignKeyField(
-        'models.Member', 'votes')
+        'models.Member', 'proposal_votes')
     proposal: fields.ForeignKeyField[Proposal] = fields.ForeignKeyField(
         'models.Proposal', 'token_votes')
     vote = fields.EnumField(enum_type=VoteKind)
     weight = fields.BigIntField()
+    timestamp = fields.DatetimeField()
 
     def __str__(self):
-        username = self.member.alias if self.member.alias != '' else self.member.address 
+        [address, proposalId] = self.id.split("_")
         return "%s voted %s in proposal %s" % (
-            username, self.vote, self.proposal.id)
+            address, self.vote.value, proposalId)
 
 
 class RepresentativeVote(Model):
     id = fields.TextField(pk=True)
     community: fields.ForeignKeyField[Community] = fields.ForeignKeyField(
-        'models.Community', 'votes')
+        'models.Community', 'proposal_votes')
     proposal: fields.ForeignKeyField[Proposal] = fields.ForeignKeyField(
         'models.Proposal', 'representatives_votes')
     vote = fields.EnumField(enum_type=VoteKind)
+    timestamp = fields.DatetimeField()
 
     def __str__(self):
+        [community, proposalId] = self.id.split("_")
         return "%s voted %s in proposal %s" % (
-            self.community.id, self.vote, self.proposal.id)
+            community, self.vote.value, proposalId)
+
+
+class Poll(Model):
+    id = fields.IntField(pk=True)
+    question = fields.TextField()
+    description = fields.TextField()
+    options = fields.JSONField()
+    vote_weight_method = fields.EnumField(enum_type=PollVoteWeightMethod)
+    issuer: fields.ForeignKeyField[Member] = fields.ForeignKeyField(
+        'models.Member', 'submitted_polls')
+    timestamp = fields.DatetimeField()
+    vote_end_timestamp = fields.DatetimeField()
+    level = fields.BigIntField()
+    votes_summary = fields.JSONField()
+
+    def __str__(self):
+        return "poll %i (%s)" % (self.id, self.question)
+
+
+class PollVote(Model):
+    id = fields.TextField(pk=True)
+    member: fields.ForeignKeyField[Member] = fields.ForeignKeyField(
+        'models.Member', 'poll_votes')
+    poll: fields.ForeignKeyField[Poll] = fields.ForeignKeyField(
+        'models.Poll', 'votes')
+    option = fields.IntField()
+    weight = fields.BigIntField()
+    timestamp = fields.DatetimeField()
+
+    def __str__(self):
+        [address, pollId] = self.id.split("_")
+        return "%s voted option '%s' in poll %s" % (
+            address, self.option, pollId)

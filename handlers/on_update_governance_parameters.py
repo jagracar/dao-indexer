@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 from dao_indexer import models as models
+from dao_indexer.handlers import utils
 from dao_indexer.types.dao_governance.tezos_big_maps.governance_parameters_key import GovernanceParametersKey
 from dao_indexer.types.dao_governance.tezos_big_maps.governance_parameters_value import GovernanceParametersValue
 from dipdup.context import HandlerContext
@@ -19,7 +20,7 @@ async def on_update_governance_parameters(
     gpData = governance_parameters.value
     gp = await models.GovernanceParameters.create(
         id=governance_parameters.key.__root__,
-        vote_method=models.VoteMethod(list(gpData.vote_method.__dict__.keys())[0]),
+        vote_method=models.ProposalVoteWeightMethod(utils.first_key(gpData.vote_method.dict())),
         vote_period=timedelta(days=int(gpData.vote_period)),
         wait_period=timedelta(days=int(gpData.wait_period)),
         escrow_amount=gpData.escrow_amount,
@@ -36,4 +37,4 @@ async def on_update_governance_parameters(
     )
 
     # Print some log information
-    ctx.logger.info(gp)
+    ctx.logger.info("New DAO governance parameters: %i", gp.id)
