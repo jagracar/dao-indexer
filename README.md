@@ -34,7 +34,7 @@ Or spawn a Compose stack:
 cd deploy
 cp .env.default .env
 # Edit .env file before running
-docker-compose up
+docker compose up
 ```
 
 ## Development setup

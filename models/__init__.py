@@ -38,7 +38,7 @@ class VoteKind(Enum):
 class Member(Model):
     address = fields.CharField(36, pk=True)
     alias = fields.TextField(default='')
-    token_balance = fields.DecimalField(decimal_places=6, max_digits=12, default=0)
+    token_balance = fields.DecimalField(decimal_places=6, max_digits=13, default=0)
     n_token_checkpoints = fields.BigIntField(default=0)
     n_submitted_proposals = fields.IntField(default=0)
     n_voted_proposals = fields.IntField(default=0)
